@@ -1,4 +1,5 @@
 import sys
+import ssl
 import socket
 import argparse
 import validators
@@ -8,6 +9,9 @@ def encode_request(method, host, path, data, header):
     # default to GET method if method not specified
     if not method:
         method = "GET"
+    
+    # default data to empty string
+    data = data or ""
 
     req = f"{method} {path} HTTP/1.1\r\n"
     req += f"Host:{host}\r\n"
@@ -17,37 +21,35 @@ def encode_request(method, host, path, data, header):
             req += "Accept: */*\r\n"
             req += "Connection: close\r\n\r\n"
             return req.encode()
-        case "POST" | "PUT":
+        case "POST" | "PUT" | "PATCH":
             req += f"{header}\r\n"
             req += f"Content-Length: {len(data)}\r\n"
             req += f"Connection: close\r\n\r\n{data}"
+            return req.encode()
+        case "HEAD":
+            req += "Connection: close\r\n\r\n"
             return req.encode()
         case _:
             print("Error: Method doesn't exist")
             sys.exit(1)
         
-def handle_request(req, host, port):
-    # default to port 80 and 443 for HTTPS
-    if not port:
-        port = 80
+def handle_request(req, host):
+    context = ssl.create_default_context()
 
-    try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.connect((host, port))
-        sock.sendall(req)
+    # https://docs.python.org/3/library/ssl.html
+    with socket.create_connection((host, 443)) as sock:
+        with context.wrap_socket(sock, server_hostname=host) as ssock:
+            ssock.sendall(req)
 
-        # read the response data from the server
-        res = ""
-        while True:
-            data = sock.recv(1024)
-            if not data:
-                break
-            res += data.decode()
-        return res
-    except ValueError as err:
-        print(err)
-        sys.exit(1)
-
+            # read the response data from the server
+            res = ""
+            while True:
+                data = ssock.recv(1024)
+                if not data:
+                    break
+                res += data.decode()
+            return res
+        
 def main():
     parser = argparse.ArgumentParser(prog="curlpy", usage="python main.py [options...] <url>")
     parser.add_argument("-v", action="store_true", 
@@ -65,11 +67,11 @@ def main():
         sys.exit(1)
 
     parsed_url = urlparse(url)
-    host, path, port = parsed_url.hostname, parsed_url.path, parsed_url.port
+    host, path, protocol = parsed_url.hostname, parsed_url.path, parsed_url.scheme
 
     # only support http for now
-    if parsed_url.scheme != "http":
-        print('Error: only HTTP protocol is supported')
+    if not protocol.startswith("http"):
+        print('Error: protocol not supported. Only support HTTP and HTTPS')
         sys.exit(1)
 
     # make request with method, host name, and path
@@ -80,7 +82,7 @@ def main():
         for msg in req.decode().split("\r\n"):
             print(">", msg)
 
-    res = handle_request(req, host, port)
+    res = handle_request(req, host)
 
     # verbose for incoming response
     if verbose:
