@@ -70,8 +70,6 @@ def main():
     if args.v:
         for item in req.decode().split("\r\n"):
             print(">", item)
-    else:
-        print(req.decode())
 
     res = handle_request(req, parsed_url.hostname)
 
@@ -83,7 +81,9 @@ def main():
             else:
                 print(item)
     else:
-        print(res)
+        for item in res.split("\r\n"):
+            if item.startswith("{"):
+                print(item)
         
 
 if __name__ == "__main__":
