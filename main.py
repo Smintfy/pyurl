@@ -4,23 +4,28 @@ import argparse
 import validators
 from urllib.parse import urlparse
 
-def encode_request(host, path):
-    # fields are separated by \r\n and the request ends with \r\n\r\n
-    req = f"GET {path} HTTP/1.1\r\n"
+def encode_request(method, host, path):
+    # Connection: close -> tell server to close the connection
+    req = f"{method} {path} HTTP/1.1\r\n"
     req += f"Host:{host}\r\n"
     req += "Accept: */*\r\n"
-    req += "Connection: close\r\n\r\n"
 
-    # encode from string to bytes
-    return req.encode()
+    match method:
+        case "GET" | "DELETE":
+            req += "Connection: close\r\n\r\n"
+            # encode from string to bytes
+            return req.encode()
+        case _:
+            print("Error: Method doesn't exist")
+            sys.exit(1)
 
-# send the GET request and dump out the response
-def send_GET(host, path, port=80):
+# send request and dump out the response
+def handle_request(req, host, port=80):
     try:
-        # socks :D    
+        # socks :D 
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect((host, port))
-        sock.send(encode_request(host, path))
+        sock.send(req)
 
         res = ""
 
@@ -28,7 +33,6 @@ def send_GET(host, path, port=80):
         while True:
             data = sock.recv(1024)
             if not data:
-                print("Error reading data")
                 break
             res += data.decode()
         return res
@@ -37,17 +41,15 @@ def send_GET(host, path, port=80):
         sys.exit(1)
 
 def main():
+    # -v verbose > in, < out
     # -X <method>
     # url
     parser = argparse.ArgumentParser()
-
+    parser.add_argument("-v", action="store_true")
     parser.add_argument("-X")
     parser.add_argument("url")
 
     args = parser.parse_args()
-
-    print(args.X, args.url)
-    
     url = args.url
 
     if not validators.url(url):
@@ -60,8 +62,29 @@ def main():
         print('Error: only HTTP protocol is supported')
         sys.exit(1)
 
-    res = send_GET(parsed_url.hostname, parsed_url.path)
-    print(res)
+    method = args.X or "GET"
+
+    req = encode_request(method, parsed_url.hostname, parsed_url.path)
+
+    # verbose req, incoming direction
+    if args.v:
+        for item in req.decode().split("\r\n"):
+            print(">", item)
+    else:
+        print(req.decode())
+
+    res = handle_request(req, parsed_url.hostname)
+
+    # verbose response, outcome direction
+    if args.v:
+        for item in res.split("\r\n"):
+            if not item.startswith("{"):
+                print("<", item)
+            else:
+                print(item)
+    else:
+        print(res)
+        
 
 if __name__ == "__main__":
     main()
