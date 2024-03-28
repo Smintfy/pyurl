@@ -1,6 +1,6 @@
 # pyurl
 
-A curl clone written in python. Currently only support HTTP protocol.
+A curl clone written in python for testing REST API with HTTP/1.1 protocol. Support localhost, HTTP, and HTTPS.
 
 ## Get started
 1. Clone the repository
