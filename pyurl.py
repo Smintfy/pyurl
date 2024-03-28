@@ -24,7 +24,7 @@ def encode_request(method, host, path, data, header):
         case "POST" | "PUT" | "PATCH":
             req += f"{header}\r\n"
             req += f"Content-Length: {len(data)}\r\n"
-            req += f"Connection: close\r\n\r\n{data}"
+            req += f"Connection: close\r\n\r\n{data}" # request body
             return req.encode()
         case "HEAD":
             req += "Connection: close\r\n\r\n"
@@ -33,22 +33,36 @@ def encode_request(method, host, path, data, header):
             print("Error: Method doesn't exist")
             sys.exit(1)
         
-def handle_request(req, host):
-    context = ssl.create_default_context()
+def handle_request(req, host, protocol, port):
+    if not port:
+        if protocol == "https":
+            port = 443
+        else:
+            port = 80
 
-    # https://docs.python.org/3/library/ssl.html
-    with socket.create_connection((host, 443)) as sock:
-        with context.wrap_socket(sock, server_hostname=host) as ssock:
-            ssock.sendall(req)
+    try:
+        # creates a TCP connection
+        sock = socket.create_connection((host, port))
 
-            # read the response data from the server
-            res = ""
-            while True:
-                data = ssock.recv(1024)
-                if not data:
-                    break
-                res += data.decode()
-            return res
+        # wrap the socket with ssl to support HTTPS
+        if protocol == "https":
+            context = ssl.create_default_context()
+            sock = context.wrap_socket(sock, server_hostname=host)
+
+        # send the request
+        sock.sendall(req)
+
+        # read the response data from the server
+        res = ""
+        while True:
+            data = sock.recv(1024)
+            if not data:
+                break
+            res += data.decode()
+        return res
+    except ValueError as e:
+        print(e)
+        sys.exit(1)
         
 def main():
     parser = argparse.ArgumentParser(prog="curlpy", usage="python main.py [options...] <url>")
@@ -62,14 +76,15 @@ def main():
     args = parser.parse_args()
     verbose, method, url, data, header = args.v, args.X, args.url, args.d, args.H
 
-    if not validators.url(url):
+    parsed_url = urlparse(url)
+    host, path, protocol, port = parsed_url.hostname, parsed_url.path, parsed_url.scheme, parsed_url.port
+
+    # validate the url and localhost
+    if not validators.url(url) and not host == "localhost":
         print('Error: provided url is not valid')
         sys.exit(1)
 
-    parsed_url = urlparse(url)
-    host, path, protocol = parsed_url.hostname, parsed_url.path, parsed_url.scheme
-
-    # only support http for now
+    # only support http and https for now
     if not protocol.startswith("http"):
         print('Error: protocol not supported. Only support HTTP and HTTPS')
         sys.exit(1)
@@ -82,7 +97,7 @@ def main():
         for msg in req.decode().split("\r\n"):
             print(">", msg)
 
-    res = handle_request(req, host)
+    res = handle_request(req, host, protocol, port)
 
     # verbose for incoming response
     if verbose:
