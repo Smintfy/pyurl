@@ -1,6 +1,10 @@
 # pyurl
 
-A curl clone written in python for testing REST API with HTTP/1.1 protocol. Support localhost, HTTP, and HTTPS.
+A curl clone toy project written in python for testing REST API with HTTP/1.1 protocol. Support localhost, HTTP, and HTTPS.
+
+## TODO
+- [ ] Handling keep alive and using it to send multiple requests over the same TCP connection.
+- [ ] Graphical User Interface
 
 ## Get started
 1. Clone the repository
@@ -30,7 +34,7 @@ enable -v flag to enable verbose (adding > and < to show which direction the mes
 
 `GET`
 ```bash
-   python main.py http://eu.httpbin.org/get
+   python pycurl.py http://eu.httpbin.org/get
 
    # output
 
@@ -47,7 +51,7 @@ enable -v flag to enable verbose (adding > and < to show which direction the mes
 
 `DELETE`
 ```bash
-   python main.py -X DELETE http://eu.httpbin.org/delete
+   python pycurl.py -X DELETE http://eu.httpbin.org/delete
 
    # output
 
@@ -68,7 +72,7 @@ enable -v flag to enable verbose (adding > and < to show which direction the mes
 
 `POST`
 ```bash
-   python main.py -X POST http://eu.httpbin.org/post \
+   python pycurl.py -X POST http://eu.httpbin.org/post \
     -d '{"key": "value"}' \
     -H "Content-Type: application/json"
 
@@ -94,7 +98,7 @@ enable -v flag to enable verbose (adding > and < to show which direction the mes
 
 `PUT`
 ```bash
-   python main.py -X  PUT http://eu.httpbin.org/put \
+   python pycurl.py -X PUT http://eu.httpbin.org/put \
     -d '{"key": "value2"}' \
     -H "Content-Type: application/json"
 
