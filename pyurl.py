@@ -19,7 +19,7 @@ class Sock:
     def connect(self, host: str, protocol: str, port: int | None, verbose=False) -> None:
         # default port
         if port is None:
-            if port is HTTPS:
+            if protocol == HTTPS:
                 port = 443
             else:
                 port = 80
@@ -29,7 +29,7 @@ class Sock:
             self.sock.connect((host, port))
 
             # wrap the connection with SSL context if protocol is HTTPS
-            if protocol is HTTPS:
+            if protocol == HTTPS:
                 context = ssl.create_default_context()
                 self.sock = context.wrap_socket(self.sock, server_hostname=host)
         except:
@@ -62,7 +62,7 @@ def encode_request(method: str | None, host: str, path: str, data: None, header:
 
     # building the request
     req = f"{method} {path} HTTP/1.1\r\n"
-    req += f"Host:{host}\r\n"
+    req += f"Host: {host}\r\n"
     req += "Accept: */*\r\n"
     req += "Connection: close\r\n"
 
@@ -95,7 +95,7 @@ def main():
     host, path, protocol, port = parsed_url.hostname, parsed_url.path, parsed_url.scheme, parsed_url.port
 
     # validate url while also allowing localhost
-    if url is LOCALHOST and not validators.url(url):
+    if host != LOCALHOST and not validators.url(url):
         print('Error: provided url is not valid')
         sys.exit(1)
 
