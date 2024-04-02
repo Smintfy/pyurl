@@ -5,6 +5,7 @@ A curl clone toy project written in python for testing REST API with HTTP/1.1 pr
 ## TODO
 - [ ] Handling keep alive and using it to send multiple requests over the same TCP connection.
 - [ ] Graphical User Interface
+- [ ] Automated API testing
 
 ## Get started
 1. Clone the repository
